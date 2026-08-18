@@ -20,7 +20,7 @@ function defaultState() {
     act: 1,
     philosophers: PHIL_NAMES.map((name, i) => ({
       id: i, name, state: "thinking",
-      leftFork: i, rightFork: (i + 1) % 5,
+      leftFork: i, rightFork: (i - 1 + 5) % 5,
       holding: [], seated: true, attemptedSecond: false
     })),
     forks: FORK_NAMES.map((name, i) => ({ id: i, name, lockedBy: null })),
