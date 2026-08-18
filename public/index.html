@@ -110,7 +110,7 @@
     border:3px solid var(--ink);
     display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
   }
-  .table-center .tc-label{font-size:12px; text-transform:uppercase; letter-spacing:0.15em; color:#6b6558; font-weight:700;}
+  .table-center .tc-label{font-size:13px; text-transform:uppercase; letter-spacing:0.14em; color:#3a352c; font-weight:800;}
   .table-center .tc-value{font-family:'Fraunces', serif; font-size:clamp(18px,3vmin,30px); font-weight:700; margin-top:6px; padding:0 10%; color:var(--ink);}
   .table-center.deadlocked .tc-value{color:var(--red);}
   .table-center.eating .tc-value{color:var(--green-dim);}
@@ -121,9 +121,9 @@
     display:flex; align-items:center; justify-content:center; flex-direction:column;
     transition: border-color .35s ease, background .35s ease, box-shadow .35s ease;
   }
-  .seat .seat-icon{font-size:clamp(20px,3.6vmin,34px);}
-  .seat .seat-name{font-family:'Fraunces', serif; font-weight:700; font-size:clamp(11px,1.7vmin,17px); margin-top:2px; color:var(--ink); text-align:center; padding:0 6%; line-height:1.1;}
-  .seat .seat-state{font-size:clamp(8px,1.1vmin,10px); text-transform:uppercase; letter-spacing:0.08em; color:#8a8375; margin-top:2px; font-weight:700;}
+  .seat .seat-icon{font-size:clamp(15px,2.6vmin,26px);}
+  .seat .seat-name{font-family:'Fraunces', serif; font-weight:800; font-size:clamp(13px,2vmin,19px); margin-top:3px; color:var(--ink); text-align:center; padding:0 6%; line-height:1.15;}
+  .seat .seat-state{font-size:clamp(10px,1.4vmin,13px); text-transform:uppercase; letter-spacing:0.06em; color:#3a352c; margin-top:3px; font-weight:800;}
   .seat.thinking{border-color:var(--ink);}
   .seat.hungry{border-color:var(--amber-dim); background:#FDF4E4;}
   .seat.holding-one{border-color:var(--amber); background:#FDF0DA; box-shadow:0 0 0 6px rgba(232,163,61,0.18);}
@@ -139,14 +139,14 @@
     transition: border-color .3s ease, background .3s ease, transform .3s ease;
     padding:4px;
   }
-  .fork .fork-emoji{font-size:clamp(13px,2vmin,20px);}
-  .fork .fork-label{font-size:clamp(7px,1vmin,9.5px); font-weight:700; color:#6b6558; margin-top:1px; text-align:center; line-height:1.05;}
+  .fork .fork-emoji{font-size:clamp(10px,1.5vmin,15px);}
+  .fork .fork-label{font-size:clamp(8px,1.1vmin,10.5px); font-weight:800; color:#4a4438; margin-top:1px; text-align:center; line-height:1.05;}
   .fork.free{border-color:var(--green-dim);}
   .fork.locked{border-color:var(--amber); background:#FDF0DA; transform:scale(1.14);}
-  .fork.locked .fork-label{color:#8a6425;}
+  .fork.locked .fork-label{color:#6b4a17; font-weight:800;}
 
   .stage-footer{position:absolute; bottom:22px; left:0; right:0; text-align:center;}
-  .stage-footer .log-line{font-size:14px; color:#4a453c; font-family:'JetBrains Mono', monospace; font-weight:600;}
+  .stage-footer .log-line{font-size:clamp(15px,2vmin,20px); color:#211f1a; font-family:'JetBrains Mono', monospace; font-weight:800;}
 
   @media (max-width: 640px){ .role-grid{max-width:340px;} }
 </style>
