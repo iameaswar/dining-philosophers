@@ -3,7 +3,6 @@
 // /phil0..phil4 -> philosopher control screens
 // /fork0..fork4 -> fork status screens
 // /waiter -> waiter control screen
-//
 
 const path = location.pathname.replace(/^\//, '') || 'stage';
 const app = document.getElementById('app');
@@ -242,11 +241,24 @@ function renderNarrator(){
 function renderStage(){
   // Seats are placed at 5 fixed points around a circle. Forks are NOT a
   // separate hardcoded list -- each fork sits at the ANGULAR MIDPOINT
-  // between the two seats it belongs to (fork i is shared by philosopher i's
-  // right hand and philosopher (i+1)%5's left hand, matching leftFork/
-  // rightFork in game.js). Deriving position from the seat angles instead of
-  // hand-placing two separate arrays is what guarantees a fork always
-  // visually sits next to the correct two philosophers.
+  // between the two seats that share it.
+  //
+  // CRITICAL: this must match game.js exactly, or forks render on the wrong
+  // side of a philosopher even though the correct two neighbours are still
+  // touching it (a bug that slipped through once already, because "is fork X
+  // closest to seats A and B" can pass while "is fork X on the correct SIDE
+  // of seat A" still fails -- adjacency isn't the same as sidedness).
+  //
+  // game.js defines, per philosopher i: leftFork = i, rightFork = (i+1)%5.
+  // So fork i is philosopher i's LEFT fork, and philosopher (i-1+5)%5's
+  // RIGHT fork. Seats are laid out clockwise starting at the top (seat 0 at
+  // Seat/fork geometry. CRITICAL: fork positions are NOT computed from fork
+  // index rotation independently of the game rules -- that's what caused the
+  // last bug (two different, disagreeing definitions of "who sits next to
+  // whom": one baked into this file's rotation math, one in game.js's
+  // leftFork/rightFork). Instead, each fork's position is derived directly
+  // from the SAME leftFork/rightFork data the game logic uses to decide who
+  // can pick it up. There is now exactly one source of truth for adjacency.
   const CENTER = 50; // percent
   const SEAT_RADIUS = 42; // percent, distance of seats from center
   const FORK_RADIUS = 33; // percent, forks sit closer in, between seats
@@ -264,16 +276,28 @@ function renderStage(){
 
   const seatPositions = [0,1,2,3,4].map(i => pointAt(seatAngleDeg(i), SEAT_RADIUS));
 
-  // Fork i sits between seat i and seat (i+1)%5 -- the midpoint angle,
-  // taking the shorter way around so fork 4 (between seat 4 and seat 0)
-  // doesn't wrap the long way round the circle.
-  function forkAngleDeg(i){
-    const a1 = seatAngleDeg(i);
-    let a2 = seatAngleDeg((i + 1) % 5);
-    if (a2 < a1) a2 += 360; // unwrap so the midpoint is the short arc
+  // For each fork, find which philosopher owns it as their leftFork and
+  // which owns it as their rightFork -- straight from state.philosophers,
+  // the exact same data philPickup()/philPickupAct2() on the server use to
+  // decide if a pickup is legal. The fork's angle is the midpoint between
+  // those two philosophers' seats, always the SHORT way around the circle.
+  function forkAngleDeg(forkId){
+    const leftOwner = state.philosophers.find(p => p.rightFork === forkId);
+    const rightOwner = state.philosophers.find(p => p.leftFork === forkId);
+    // Both should always exist in a well-formed 5-philosopher/5-fork table,
+    // but guard defensively rather than crash the whole stage view.
+    if (!leftOwner || !rightOwner) return 0;
+    let a1 = seatAngleDeg(leftOwner.id);
+    let a2 = seatAngleDeg(rightOwner.id);
+    // Unwrap so we take the shorter arc between the two seats, not the long
+    // way around (this is what makes fork 4, between seat 4 and seat 0,
+    // render correctly instead of on the opposite side of the table).
+    if (Math.abs(a2 - a1) > 180) {
+      if (a2 > a1) a1 += 360; else a2 += 360;
+    }
     return (a1 + a2) / 2;
   }
-  const forkPositions = [0,1,2,3,4].map(i => pointAt(forkAngleDeg(i), FORK_RADIUS));
+  const forkPositions = state.forks.map(f => pointAt(forkAngleDeg(f.id), FORK_RADIUS));
 
   const seatEls = state.philosophers.map((p,i)=>{
     const pos = seatPositions[i];
