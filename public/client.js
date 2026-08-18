@@ -3,6 +3,7 @@
 // /phil0..phil4 -> philosopher control screens
 // /fork0..fork4 -> fork status screens
 // /waiter -> waiter control screen
+//
 
 const path = location.pathname.replace(/^\//, '') || 'stage';
 const app = document.getElementById('app');
