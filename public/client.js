@@ -239,20 +239,40 @@ function renderNarrator(){
 
 // ---------------- STAGE / PROJECTOR ----------------
 function renderStage(){
-  const seatPositions = [
-    {top:"2%", left:"50%", tf:"translate(-50%,0)"},
-    {top:"22%", left:"92%", tf:"translate(-100%,0)"},
-    {top:"78%", left:"78%", tf:"translate(-50%,-50%)"},
-    {top:"78%", left:"22%", tf:"translate(-50%,-50%)"},
-    {top:"22%", left:"8%", tf:"translate(0,0)"},
-  ];
-  const forkPositions = [
-    {top:"10%", left:"75%"},
-    {top:"52%", left:"96%"},
-    {top:"92%", left:"50%"},
-    {top:"52%", left:"4%"},
-    {top:"10%", left:"25%"},
-  ];
+  // Seats are placed at 5 fixed points around a circle. Forks are NOT a
+  // separate hardcoded list -- each fork sits at the ANGULAR MIDPOINT
+  // between the two seats it belongs to (fork i is shared by philosopher i's
+  // right hand and philosopher (i+1)%5's left hand, matching leftFork/
+  // rightFork in game.js). Deriving position from the seat angles instead of
+  // hand-placing two separate arrays is what guarantees a fork always
+  // visually sits next to the correct two philosophers.
+  const CENTER = 50; // percent
+  const SEAT_RADIUS = 42; // percent, distance of seats from center
+  const FORK_RADIUS = 33; // percent, forks sit closer in, between seats
+
+  // Seat 0 at top (-90deg), then clockwise every 72deg.
+  function seatAngleDeg(i){ return -90 + i * 72; }
+
+  function pointAt(angleDeg, radius){
+    const rad = (angleDeg * Math.PI) / 180;
+    return {
+      top: `${CENTER + radius * Math.sin(rad)}%`,
+      left: `${CENTER + radius * Math.cos(rad)}%`
+    };
+  }
+
+  const seatPositions = [0,1,2,3,4].map(i => pointAt(seatAngleDeg(i), SEAT_RADIUS));
+
+  // Fork i sits between seat i and seat (i+1)%5 -- the midpoint angle,
+  // taking the shorter way around so fork 4 (between seat 4 and seat 0)
+  // doesn't wrap the long way round the circle.
+  function forkAngleDeg(i){
+    const a1 = seatAngleDeg(i);
+    let a2 = seatAngleDeg((i + 1) % 5);
+    if (a2 < a1) a2 += 360; // unwrap so the midpoint is the short arc
+    return (a1 + a2) / 2;
+  }
+  const forkPositions = [0,1,2,3,4].map(i => pointAt(forkAngleDeg(i), FORK_RADIUS));
 
   const seatEls = state.philosophers.map((p,i)=>{
     const pos = seatPositions[i];
@@ -260,12 +280,12 @@ function renderStage(){
     if(state.act===2 && !p.seated){
       cls = state.waiterQueue.find(q=>q.philId===p.id) ? "hungry" : "waiting-room";
     }
-    let icon = "🧑";
+    let icon = "🙂";
     if(p.state==="eating") icon="😋";
     else if(p.state==="stuck") icon="😵";
     else if(p.state==="holding-one") icon="🤔";
     else if(p.state==="waiting-room") icon="⏳";
-    return `<div class="seat ${cls}" style="top:${pos.top}; left:${pos.left}; transform:${pos.tf};">
+    return `<div class="seat ${cls}" style="top:${pos.top}; left:${pos.left}; transform:translate(-50%,-50%);">
       <span class="seat-icon">${icon}</span>
       <span class="seat-name">${p.name}</span>
       <span class="seat-state">${p.state.replace('-',' ')}</span>
