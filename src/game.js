@@ -2,32 +2,26 @@
 // whole class. Every phone + the projector connect to THIS SAME instance
 // (we always look it up by the same fixed name, see index.js), so everyone
 // sees the same table in real time.
+//
+// DELIBERATELY MINIMAL: this is only ever the "deadlock" state — no Waiter,
+// no seat limits, no second act. The Waiter is 100% live theater (a real
+// person tapping shoulders on stage) and never touches this code at all.
+// Philosophers are labeled 1-5, Forks are labeled A-E — no names, no
+// "Person N," nothing beyond the bare number/letter and a one-word state.
 
 import { DurableObject } from "cloudflare:workers";
 
-// ---------------------------------------------------------------------
-// EDIT NAMES HERE — the only place you need to hardcode names.
-// Keep exactly 5 philosopher names and 5 fork names, in seat order
-// (clockwise around the table, seat 0 first).
-// ---------------------------------------------------------------------
-const PHIL_NAMES = ["Person 1", "Person 2", "Person 3", "Person 4", "Person 5"];
-const FORK_NAMES = ["Person 6", "Person 7", "Person 8", "Person 9", "Person 10"];
-const WAITER_NAME = "Person 11";
-// ---------------------------------------------------------------------
+const FORK_LETTERS = ["A", "B", "C", "D", "E"];
 
 function defaultState() {
   return {
-    act: 1,
-    philosophers: PHIL_NAMES.map((name, i) => ({
-      id: i, name, state: "thinking",
+    philosophers: [0, 1, 2, 3, 4].map(i => ({
+      id: i, number: i + 1, state: "thinking",
       leftFork: i, rightFork: (i - 1 + 5) % 5,
-      holding: [], seated: true, attemptedSecond: false
+      holding: [], attemptedSecond: false
     })),
-    forks: FORK_NAMES.map((name, i) => ({ id: i, name, lockedBy: null })),
-    waiterQueue: [],
-    seatedCount: 5,
-    deadlocked: false,
-    log: "Waiting for the feast to begin…"
+    forks: FORK_LETTERS.map((letter, i) => ({ id: i, letter, lockedBy: null })),
+    deadlocked: false
   };
 }
 
@@ -75,18 +69,10 @@ export class DiningPhilosophersRoom extends DurableObject {
     try { msg = JSON.parse(message); } catch (e) { return; }
 
     await this.ensureState();
-    const s = this.state;
 
     switch (msg.action) {
       case "philPickup": this.philPickup(msg.philId, msg.side); break;
       case "philRelease": this.philRelease(msg.philId); break;
-      case "forceDeadlockReset": this.forceDeadlockReset(); break;
-      case "goToAct2": this.goToAct2(); break;
-      case "requestSeat": this.requestSeat(msg.philId); break;
-      case "waiterApprove": this.waiterApprove(msg.philId); break;
-      case "waiterDeny": this.waiterDeny(msg.philId); break;
-      case "philPickupAct2": this.philPickupAct2(msg.philId, msg.side); break;
-      case "philDoneEating": this.philDoneEating(msg.philId); break;
       case "resetAll": this.resetAll(); break;
       default: return;
     }
@@ -111,7 +97,7 @@ export class DiningPhilosophersRoom extends DurableObject {
     }
   }
 
-  // ---------------- Game logic (identical rules throughout all versions) ----------------
+  // ---------------- Game logic — deadlock only, nothing else ----------------
   philPickup(philId, side) {
     const s = this.state;
     const p = s.philosophers[philId];
@@ -121,7 +107,6 @@ export class DiningPhilosophersRoom extends DurableObject {
       if (p.holding.length === 1) {
         p.state = "stuck";
         p.attemptedSecond = true;
-        s.log = `${p.name} reaches for their other fork — already taken.`;
         this.checkDeadlock();
       }
       return;
@@ -130,7 +115,6 @@ export class DiningPhilosophersRoom extends DurableObject {
     p.holding.push(forkId);
     if (p.holding.length === 1) p.state = "holding-one";
     if (p.holding.length === 2) p.state = "eating";
-    s.log = `${p.name} picks up ${fork.name}'s fork.`;
     this.checkDeadlock();
   }
   philRelease(philId) {
@@ -140,7 +124,6 @@ export class DiningPhilosophersRoom extends DurableObject {
     p.holding = [];
     p.state = "thinking";
     p.attemptedSecond = false;
-    s.log = `${p.name} sets down both forks.`;
     s.deadlocked = false;
   }
   checkDeadlock() {
@@ -149,78 +132,7 @@ export class DiningPhilosophersRoom extends DurableObject {
     const anyoneEating = s.philosophers.some(p => p.holding.length === 2);
     if (allStuckAndTried && !anyoneEating) {
       s.deadlocked = true;
-      s.log = "DEADLOCK — every philosopher holds one fork and can't get the other. No one can eat.";
     }
-  }
-  forceDeadlockReset() {
-    const s = this.state;
-    s.philosophers.forEach(p => { p.state = "thinking"; p.holding = []; p.attemptedSecond = false; });
-    s.forks.forEach(f => { f.lockedBy = null; });
-    s.deadlocked = false;
-    s.log = "Table reset. Act 1 ready to run again.";
-  }
-  goToAct2() {
-    const s = this.state;
-    s.act = 2;
-    s.philosophers.forEach(p => { p.state = "thinking"; p.holding = []; p.seated = false; p.attemptedSecond = false; });
-    s.forks.forEach(f => { f.lockedBy = null; });
-    s.waiterQueue = [];
-    s.seatedCount = 0;
-    s.deadlocked = false;
-    s.log = "The Waiter takes the floor. Act II begins.";
-  }
-  requestSeat(philId) {
-    const s = this.state;
-    const p = s.philosophers[philId];
-    if (p.seated) return;
-    if (s.waiterQueue.find(q => q.philId === philId)) return;
-    s.waiterQueue.push({ philId });
-    p.state = "hungry";
-    s.log = `${p.name} asks the Waiter for a seat.`;
-  }
-  waiterApprove(philId) {
-    const s = this.state;
-    if (s.seatedCount >= 4) { s.log = "Table full — Waiter holds the line."; return; }
-    const p = s.philosophers[philId];
-    p.seated = true;
-    p.state = "thinking";
-    s.seatedCount += 1;
-    s.waiterQueue = s.waiterQueue.filter(q => q.philId !== philId);
-    s.log = `Waiter seats ${p.name}. (${s.seatedCount}/4 seats filled)`;
-  }
-  waiterDeny(philId) {
-    const s = this.state;
-    const p = s.philosophers[philId];
-    s.waiterQueue = s.waiterQueue.filter(q => q.philId !== philId);
-    p.state = "waiting-room";
-    s.log = `Waiter asks ${p.name} to wait.`;
-  }
-  philPickupAct2(philId, side) {
-    const s = this.state;
-    const p = s.philosophers[philId];
-    if (!p.seated) return;
-    const forkId = side === 'left' ? p.leftFork : p.rightFork;
-    const fork = s.forks[forkId];
-    if (fork.lockedBy !== null) return;
-    fork.lockedBy = philId;
-    p.holding.push(forkId);
-    if (p.holding.length === 1) p.state = "holding-one";
-    if (p.holding.length === 2) {
-      p.state = "eating";
-      s.log = `${p.name} is eating! The system resolves.`;
-    } else {
-      s.log = `${p.name} picks up ${fork.name}'s fork.`;
-    }
-  }
-  philDoneEating(philId) {
-    const s = this.state;
-    const p = s.philosophers[philId];
-    p.holding.forEach(fid => s.forks[fid].lockedBy = null);
-    p.holding = [];
-    p.seated = false;
-    p.state = "thinking";
-    s.seatedCount -= 1;
-    s.log = `${p.name} finishes and leaves the table. A seat opens.`;
   }
   resetAll() {
     this.state = defaultState();
