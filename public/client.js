@@ -53,6 +53,7 @@ function send(action, extra){
 function render(){
   if(!state){ app.innerHTML = `<div class="role-screen"><p class="hint">Loading…</p></div>`; return; }
   if(path === 'stage') return renderStage();
+  if(path === 'reset') return renderReset();
   if(path.startsWith('phil')) return renderPhilosopher(parseInt(path.replace('phil','')));
   if(path.startsWith('fork')) return renderFork(parseInt(path.replace('fork','')));
   app.innerHTML = `<div class="role-screen"><p class="hint">Unknown role path: ${path}</p></div>`;
@@ -155,6 +156,20 @@ function renderFork(id){
           ${heldBy? '🔒' : '🟢'}
         </div>
       </div>
+      <div class="spacer"></div>
+    </div>
+  `;
+}
+
+// ---------------- RESET (emergency escape hatch, not a control panel) ----------------
+function renderReset(){
+  app.innerHTML = `
+    <div class="role-screen">
+      <div class="role-header">
+        <div class="who serif">Reset</div>
+      </div>
+      <p class="hint" style="text-align:center; margin-top:20px;">Wipes everyone back to thinking, all forks free. Use this if the table ever shows wrong/stuck data — for example if a philosopher shows a blank spot where their number should be.</p>
+      <button class="big-btn pickup" style="margin-top:20px;" onclick="send('resetAll')">Reset the table</button>
       <div class="spacer"></div>
     </div>
   `;
