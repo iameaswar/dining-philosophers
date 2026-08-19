@@ -1,8 +1,12 @@
 // client.js — role is fixed entirely by the URL path. No picker, no choice.
 // /stage -> projector view (white bg)
-// /phil0..phil4 -> philosopher control screens
-// /fork0..fork4 -> fork status screens
-// /waiter -> waiter control screen
+// /phil0..phil4 -> philosopher control screens (labeled 1-5 on screen)
+// /fork0..fork4 -> fork status screens (labeled A-E on screen)
+//
+// DELIBERATELY MINIMAL: no Waiter, no Narrator, no second act, no explanatory
+// text anywhere. Every label on screen is a single bare word — "thinking",
+// "eating", "DEADLOCK!!!" — nothing more. The Waiter is 100% live theater and
+// has no route or state here at all.
 
 const path = location.pathname.replace(/^\//, '') || 'stage';
 const app = document.getElementById('app');
@@ -12,7 +16,6 @@ const connText = document.getElementById('connText');
 document.body.className = (path === 'stage') ? 'stage-theme' : 'phone-theme';
 
 let state = null;
-let names = null; // { PHIL_NAMES, FORK_NAMES, WAITER_NAME }
 let ws = null;
 let reconnectTimer = null;
 
@@ -35,7 +38,6 @@ function connect(){
     const msg = JSON.parse(evt.data);
     if(msg.type === 'state'){
       state = msg.state;
-      if(msg.names) names = msg.names;
       render();
     }
   };
@@ -53,15 +55,12 @@ function render(){
   if(path === 'stage') return renderStage();
   if(path.startsWith('phil')) return renderPhilosopher(parseInt(path.replace('phil','')));
   if(path.startsWith('fork')) return renderFork(parseInt(path.replace('fork','')));
-  if(path === 'waiter') return renderWaiter();
-  if(path === 'narrator') return renderNarrator();
   app.innerHTML = `<div class="role-screen"><p class="hint">Unknown role path: ${path}</p></div>`;
 }
 
 // ---------------- PHILOSOPHER ----------------
 function renderPhilosopher(id){
   const p = state.philosophers[id];
-  const act = state.act;
   const leftFork = state.forks[p.leftFork];
   const rightFork = state.forks[p.rightFork];
 
@@ -75,73 +74,44 @@ function renderPhilosopher(id){
     if(fork.lockedBy === id) return "✋";
     return "🔒";
   }
+
+  // Bare state word only -- no sentences, no explanation.
   let stateLabel = {
-    "thinking":"Thinking", "hungry":"Waiting for a seat", "holding-one":"Holding one fork…",
-    "eating":"Eating!", "stuck":"STUCK — deadlocked", "waiting-room":"In the waiting room"
+    "thinking": "thinking",
+    "holding-one": "thinking",
+    "eating": "eating",
+    "stuck": "DEADLOCK!!!"
   }[p.state] || p.state;
 
-  let body = "";
-  if(act === 1){
-    const canPickLeft = leftFork.lockedBy === null && !p.holding.includes(p.leftFork);
-    const canPickRight = rightFork.lockedBy === null && !p.holding.includes(p.rightFork);
-    body = `
-      <div class="status-card">
-        <div class="state-label">Your state</div>
-        <div class="state-value">${stateLabel}</div>
+  const canPickLeft = leftFork.lockedBy === null && !p.holding.includes(p.leftFork);
+  const canPickRight = rightFork.lockedBy === null && !p.holding.includes(p.rightFork);
+
+  const body = `
+    <div class="status-card">
+      <div class="state-value">${stateLabel}</div>
+    </div>
+    <div class="fork-pair">
+      <div class="fork-slot ${forkClass(leftFork)}">
+        <div class="fork-name">Left · ${leftFork.letter}</div>
+        <span class="fork-icon">${forkIcon(leftFork)}</span>
       </div>
-      <div class="fork-pair">
-        <div class="fork-slot ${forkClass(leftFork)}">
-          <div class="fork-name">Left · ${leftFork.name}</div>
-          <span class="fork-icon">${forkIcon(leftFork)}</span>
-        </div>
-        <div class="fork-slot ${forkClass(rightFork)}">
-          <div class="fork-name">Right · ${rightFork.name}</div>
-          <span class="fork-icon">${forkIcon(rightFork)}</span>
-        </div>
+      <div class="fork-slot ${forkClass(rightFork)}">
+        <div class="fork-name">Right · ${rightFork.letter}</div>
+        <span class="fork-icon">${forkIcon(rightFork)}</span>
       </div>
-      <button class="big-btn pickup" ${!canPickLeft?'disabled':''} onclick="send('philPickup',{philId:${id},side:'left'})">Pick up left fork</button>
-      <button class="big-btn pickup" ${!canPickRight?'disabled':''} onclick="send('philPickup',{philId:${id},side:'right'})">Pick up right fork</button>
-      <button class="big-btn release" onclick="send('philRelease',{philId:${id}})">Set down forks</button>
-      <p class="hint">Wait for the Narrator's cue before pressing. This is <b>scripted</b> — everyone reaches for their left fork together first.</p>
-    `;
-  } else {
-    if(!p.seated && p.state !== "hungry" && p.state !== "waiting-room"){
-      body = `
-        <div class="status-card"><div class="state-label">Your state</div><div class="state-value">Standing by</div></div>
-        <button class="big-btn request" onclick="send('requestSeat',{philId:${id}})">Ask Waiter for a seat</button>
-        <p class="hint">In Act II, the Waiter only lets <b>4 of 5</b> sit at once. This breaks the deadlock.</p>
-      `;
-    } else if(!p.seated){
-      body = `
-        <div class="status-card"><div class="state-label">Your state</div><div class="state-value">${stateLabel}</div></div>
-        <p class="hint">Waiting on the Waiter's phone to approve you. Stay ready.</p>
-      `;
-    } else {
-      const canPickLeft = leftFork.lockedBy === null && !p.holding.includes(p.leftFork);
-      const canPickRight = rightFork.lockedBy === null && !p.holding.includes(p.rightFork);
-      const bothHeld = p.holding.length === 2;
-      body = `
-        <div class="status-card"><div class="state-label">Your state</div><div class="state-value">${stateLabel}</div></div>
-        <div class="fork-pair">
-          <div class="fork-slot ${forkClass(leftFork)}"><div class="fork-name">Left · ${leftFork.name}</div><span class="fork-icon">${forkIcon(leftFork)}</span></div>
-          <div class="fork-slot ${forkClass(rightFork)}"><div class="fork-name">Right · ${rightFork.name}</div><span class="fork-icon">${forkIcon(rightFork)}</span></div>
-        </div>
-        <button class="big-btn pickup" ${!canPickLeft?'disabled':''} onclick="send('philPickupAct2',{philId:${id},side:'left'})">Pick up left fork</button>
-        <button class="big-btn pickup" ${!canPickRight?'disabled':''} onclick="send('philPickupAct2',{philId:${id},side:'right'})">Pick up right fork</button>
-        ${bothHeld ? `<button class="big-btn eat" onclick="send('philDoneEating',{philId:${id}})">Finish eating &amp; leave table</button>` : ''}
-      `;
-    }
-  }
+    </div>
+    <button class="big-btn pickup" ${!canPickLeft?'disabled':''} onclick="send('philPickup',{philId:${id},side:'left'})">Pick up left fork</button>
+    <button class="big-btn pickup" ${!canPickRight?'disabled':''} onclick="send('philPickup',{philId:${id},side:'right'})">Pick up right fork</button>
+    <button class="big-btn release" onclick="send('philRelease',{philId:${id}})">Set down forks</button>
+  `;
 
   app.innerHTML = `
     <div class="role-screen">
       <div class="role-header">
-        <div class="who serif">${p.name}</div>
-        <div class="badge ${act===1?'act1':'act2'}">Act ${act}</div>
+        <div class="who serif">${p.number}</div>
       </div>
       ${body}
       <div class="spacer"></div>
-      <p class="hint" style="opacity:0.5">Philosopher · Left = ${leftFork.name}'s fork · Right = ${rightFork.name}'s fork</p>
     </div>
   `;
 }
@@ -150,115 +120,52 @@ function renderPhilosopher(id){
 function renderFork(id){
   const fork = state.forks[id];
   const heldBy = fork.lockedBy !== null ? state.philosophers[fork.lockedBy] : null;
-  const leftOwner = state.philosophers.find(p=>p.rightFork===id);
-  const rightOwner = state.philosophers.find(p=>p.leftFork===id);
+
+  // Which of THIS fork's two neighbors currently holds it, if any.
+  //
+  // IMPORTANT -- this is NOT the same lookup as the stage view's leftOwner/
+  // rightOwner (used only for symmetric angle math, where calling either
+  // neighbor "left" or "right" makes no visual difference either way). Here
+  // the label gets shown to a real person as the literal word LEFT or RIGHT,
+  // so it has to be correct, not just symmetric. Verified directly against
+  // the stage standing order (PHIL1-FORK_A-PHIL2-...): the philosopher who
+  // calls this fork their OWN leftFork is the one physically standing on
+  // this fork's audience-LEFT side, and vice versa. Confirmed by tracing
+  // all 5 forks against both of their legitimate owners before shipping.
+  const leftNeighbor = state.philosophers.find(p => p.leftFork === id);
+  const rightNeighbor = state.philosophers.find(p => p.rightFork === id);
+
+  let sideWord = "FREE";
+  let sideColor = "#5C8A5C"; // green
+  if (heldBy) {
+    if (leftNeighbor && heldBy.id === leftNeighbor.id) { sideWord = "LEFT"; sideColor = "#E8A33D"; }
+    else if (rightNeighbor && heldBy.id === rightNeighbor.id) { sideWord = "RIGHT"; sideColor = "#E8A33D"; }
+  }
 
   app.innerHTML = `
     <div class="role-screen">
       <div class="role-header">
-        <div class="who serif">${fork.name}</div>
-        <div class="badge ${state.act===1?'act1':'act2'}">Act ${state.act}</div>
+        <div class="who serif">${fork.letter}</div>
       </div>
       <div class="status-card" style="padding:36px 20px;">
-        <div class="state-label">Status</div>
-        <div class="state-value" style="font-size:34px; color:${heldBy? '#E8A33D':'#5C8A5C'};">
-          ${heldBy? '🔒 LOCKED' : '🟢 FREE'}
+        <div class="state-value" style="font-size:56px; font-weight:900; color:${sideColor};">
+          ${sideWord}
         </div>
-        ${heldBy ? `<p class="hint" style="margin-top:14px;">Held by <b>${heldBy.name}</b></p>` : `<p class="hint" style="margin-top:14px;">Anyone can pick this up</p>`}
-      </div>
-      <div class="spacer"></div>
-      <p class="hint">You sit between <b>${leftOwner?leftOwner.name:'—'}</b> and <b>${rightOwner?rightOwner.name:'—'}</b>. No buttons — hold your phone up so the room sees your status. Raise it high when you go LOCKED.</p>
-    </div>
-  `;
-}
-
-// ---------------- WAITER ----------------
-function renderWaiter(){
-  const queue = state.waiterQueue.map(q=>{
-    const p = state.philosophers[q.philId];
-    return `<div class="queue-item">
-      <div><div class="name">${p.name}</div><div class="req">wants a seat</div></div>
-      <div class="queue-btns">
-        <button class="mini-btn approve" onclick="send('waiterApprove',{philId:${q.philId}})">Seat</button>
-        <button class="mini-btn deny" onclick="send('waiterDeny',{philId:${q.philId}})">Hold</button>
-      </div>
-    </div>`;
-  }).join("") || `<p class="hint">No one waiting right now.</p>`;
-
-  const seatPills = state.philosophers.map(p=>{
-    let cls = "empty", label = "—";
-    if(p.seated){ cls="seated"; label = p.name; }
-    else if(state.waiterQueue.find(q=>q.philId===p.id)){ cls="waiting"; label = p.name; }
-    return `<div class="seat-pill ${cls}">${label}</div>`;
-  }).join("");
-
-  app.innerHTML = `
-    <div class="role-screen">
-      <div class="role-header">
-        <div class="who serif">The Waiter</div>
-        <div class="badge ${state.act===1?'act1':'act2'}">Act ${state.act}</div>
-      </div>
-      ${state.act===1 ? `
-        <div class="status-card"><div class="state-label">Not active yet</div><div class="state-value" style="font-size:18px;">You take the floor in Act II — after the deadlock lands.</div></div>
-      ` : `
-        <div class="status-card"><div class="state-label">Seats filled</div><div class="state-value">${state.seatedCount} / 4</div></div>
-        <div><p class="hint" style="text-align:left; margin-bottom:8px;"><b>Requests</b></p>${queue}</div>
-        <div><p class="hint" style="text-align:left; margin-bottom:6px;"><b>Table</b></p><div class="seats-mini">${seatPills}</div></div>
-        <p class="hint">Rule: never seat a 5th philosopher. Capping at 4 guarantees someone always has both forks free.</p>
-      `}
-    </div>
-  `;
-}
-
-// ---------------- NARRATOR (host controls) ----------------
-function renderNarrator(){
-  app.innerHTML = `
-    <div class="role-screen">
-      <div class="role-header">
-        <div class="who serif">Host Controls</div>
-        <div class="badge ${state.act===1?'act1':'act2'}">Act ${state.act}</div>
-      </div>
-      <div class="status-card">
-        <div class="state-label">Live log</div>
-        <div class="state-value" style="font-size:16px;">${state.log}</div>
-      </div>
-      <button class="big-btn pickup" onclick="send('forceDeadlockReset')">Reset table (redo Act I)</button>
-      ${state.act===1 ? `<button class="big-btn eat" onclick="send('goToAct2')">Advance to Act II →</button>` : ''}
-      <button class="big-btn release" onclick="send('resetAll')">Full reset (new run)</button>
-      <div class="spacer"></div>
-      <p class="hint">This is YOUR phone — separate from the projector at <b>/stage</b>. Use this to peek at state without the audience seeing your screen.</p>
-      <div style="margin-top:10px;">
-        <p class="hint" style="text-align:left;"><b>Quick state</b></p>
-        <div class="seats-mini">
-          ${state.philosophers.map(p=>`<div class="seat-pill ${p.state==='eating'?'seated':(p.state==='stuck'?'waiting':'empty')}">${p.name.slice(0,6)}</div>`).join("")}
+        <div class="state-value" style="font-size:34px; margin-top:8px;">
+          ${heldBy? '🔒' : '🟢'}
         </div>
       </div>
+      <div class="spacer"></div>
     </div>
   `;
 }
 
 // ---------------- STAGE / PROJECTOR ----------------
 function renderStage(){
-  // Seats are placed at 5 fixed points around a circle. Forks are NOT a
-  // separate hardcoded list -- each fork sits at the ANGULAR MIDPOINT
-  // between the two seats that share it.
-  //
-  // CRITICAL: this must match game.js exactly, or forks render on the wrong
-  // side of a philosopher even though the correct two neighbours are still
-  // touching it (a bug that slipped through once already, because "is fork X
-  // closest to seats A and B" can pass while "is fork X on the correct SIDE
-  // of seat A" still fails -- adjacency isn't the same as sidedness).
-  //
-  // game.js defines, per philosopher i: leftFork = i, rightFork = (i+1)%5.
-  // So fork i is philosopher i's LEFT fork, and philosopher (i-1+5)%5's
-  // RIGHT fork. Seats are laid out clockwise starting at the top (seat 0 at
-  // Seat/fork geometry. CRITICAL: fork positions are NOT computed from fork
-  // index rotation independently of the game rules -- that's what caused the
-  // last bug (two different, disagreeing definitions of "who sits next to
-  // whom": one baked into this file's rotation math, one in game.js's
-  // leftFork/rightFork). Instead, each fork's position is derived directly
-  // from the SAME leftFork/rightFork data the game logic uses to decide who
-  // can pick it up. There is now exactly one source of truth for adjacency.
+  // Seat/fork geometry. Fork positions are NOT computed from fork index
+  // rotation independently of the game rules -- each fork's position is
+  // derived directly from the SAME leftFork/rightFork data the game logic
+  // uses to decide who can pick it up. One source of truth for adjacency.
   const CENTER = 50; // percent
   const SEAT_RADIUS = 42; // percent, distance of seats from center
   const FORK_RADIUS = 33; // percent, forks sit closer in, between seats
@@ -276,22 +183,12 @@ function renderStage(){
 
   const seatPositions = [0,1,2,3,4].map(i => pointAt(seatAngleDeg(i), SEAT_RADIUS));
 
-  // For each fork, find which philosopher owns it as their leftFork and
-  // which owns it as their rightFork -- straight from state.philosophers,
-  // the exact same data philPickup()/philPickupAct2() on the server use to
-  // decide if a pickup is legal. The fork's angle is the midpoint between
-  // those two philosophers' seats, always the SHORT way around the circle.
   function forkAngleDeg(forkId){
     const leftOwner = state.philosophers.find(p => p.rightFork === forkId);
     const rightOwner = state.philosophers.find(p => p.leftFork === forkId);
-    // Both should always exist in a well-formed 5-philosopher/5-fork table,
-    // but guard defensively rather than crash the whole stage view.
     if (!leftOwner || !rightOwner) return 0;
     let a1 = seatAngleDeg(leftOwner.id);
     let a2 = seatAngleDeg(rightOwner.id);
-    // Unwrap so we take the shorter arc between the two seats, not the long
-    // way around (this is what makes fork 4, between seat 4 and seat 0,
-    // render correctly instead of on the opposite side of the table).
     if (Math.abs(a2 - a1) > 180) {
       if (a2 > a1) a1 += 360; else a2 += 360;
     }
@@ -301,19 +198,18 @@ function renderStage(){
 
   const seatEls = state.philosophers.map((p,i)=>{
     const pos = seatPositions[i];
-    let cls = p.state;
-    if(state.act===2 && !p.seated){
-      cls = state.waiterQueue.find(q=>q.philId===p.id) ? "hungry" : "waiting-room";
-    }
-    let icon = "🙂";
-    if(p.state==="eating") icon="😋";
-    else if(p.state==="stuck") icon="😵";
-    else if(p.state==="holding-one") icon="🤔";
-    else if(p.state==="waiting-room") icon="⏳";
-    return `<div class="seat ${cls}" style="top:${pos.top}; left:${pos.left}; transform:translate(-50%,-50%);">
+    // Only two faces exist: thinking-ish (🙂) and eating (😋). "stuck" still
+    // gets its own border/glow treatment via CSS class, but the FACE stays
+    // 🙂 -- no third expression, per the "only smiley + eating smiley" rule.
+    let icon = p.state === "eating" ? "😋" : "🙂";
+    // Bare word only under the seat -- "thinking", "eating", "DEADLOCK!!!"
+    let label = p.state === "eating" ? "eating"
+      : p.state === "stuck" ? "DEADLOCK!!!"
+      : "thinking";
+    return `<div class="seat ${p.state}" style="top:${pos.top}; left:${pos.left}; transform:translate(-50%,-50%);">
       <span class="seat-icon">${icon}</span>
-      <span class="seat-name">${p.name}</span>
-      <span class="seat-state">${p.state.replace('-',' ')}</span>
+      <span class="seat-name">${p.number}</span>
+      <span class="seat-state">${label}</span>
     </div>`;
   }).join("");
 
@@ -321,31 +217,23 @@ function renderStage(){
     const pos = forkPositions[i];
     const locked = f.lockedBy !== null;
     return `<div class="fork ${locked?'locked':'free'}" style="top:${pos.top}; left:${pos.left}; transform:translate(-50%,-50%);">
-      <span class="fork-emoji">🍴</span><span class="fork-label">${f.name}</span>
+      <span class="fork-emoji">🍴</span><span class="fork-label">${f.letter}</span>
     </div>`;
   }).join("");
 
-  const centerLabel = state.deadlocked ? "DEADLOCK" : (state.act===2 && state.philosophers.some(p=>p.state==="eating") ? "RESOLVED" : (state.act===1 ? "Act I — No Rules" : "Act II — The Waiter"));
-  const centerValue = state.deadlocked
-    ? "Every seat holds one fork. No one can eat."
-    : (state.act===2 ? `${state.seatedCount}/4 seated` : "Watch what happens when 5 reach at once.");
+  // Center of the table: bare word only. Nothing else.
+  const centerWord = state.deadlocked ? "DEADLOCK!!!" : (state.philosophers.some(p=>p.state==="eating") ? "eating" : "thinking");
   const centerClass = state.deadlocked ? "deadlocked" : (state.philosophers.some(p=>p.state==="eating") ? "eating" : "");
 
   app.innerHTML = `
     <div class="stage">
-      <div class="stage-header">
-        <div class="stage-title"><span class="dot">●</span> The Dining Philosophers</div>
-        <div class="stage-badge ${state.deadlocked?'deadlock':(state.act===1?'':'act2')}">${state.deadlocked?'DEADLOCK':'Act '+state.act}</div>
-      </div>
       <div class="table-wrap ${state.deadlocked?'deadlocked':''}">
         <div class="table-center ${centerClass}">
-          <div class="tc-label">${centerLabel}</div>
-          <div class="tc-value">${centerValue}</div>
+          <div class="tc-value">${centerWord}</div>
         </div>
         ${seatEls}
         ${forkEls}
       </div>
-      <div class="stage-footer"><div class="log-line">${state.log}</div></div>
     </div>
   `;
 }
