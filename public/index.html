@@ -58,44 +58,41 @@
 
   .spacer{flex:1;}
 
-  /* ---------- CONSOLE (operator) ---------- */
-  .console{min-height:100vh; min-height:100dvh; padding:14px; display:flex; flex-direction:column; gap:10px;}
+  /* ---------- PHILOSOPHER PHONE ---------- */
+  .phil{min-height:100vh; min-height:100dvh; padding:18px; display:flex;
+        flex-direction:column; gap:14px; align-items:stretch;}
 
-  .big-red{
-    width:100%; padding:26px; border:none; border-radius:14px;
-    background:#D6432F; color:#fff; font-family:'JetBrains Mono',monospace;
-    font-size:26px; font-weight:800; letter-spacing:0.06em; cursor:pointer;
-  }
-  .big-red:active{transform:scale(0.98);}
-  .big-grey{
-    width:100%; padding:16px; border:1px solid var(--line-dark); border-radius:12px;
-    background:transparent; color:var(--bone); font-family:'JetBrains Mono',monospace;
-    font-size:15px; font-weight:700; letter-spacing:0.04em; cursor:pointer;
-  }
+  .phil-num{font-family:'Fraunces',serif; font-size:80px; font-weight:800;
+            text-align:center; line-height:1; color:var(--bone);}
+  .phil-state{text-align:center; font-size:14px; font-weight:800; letter-spacing:0.12em;
+              text-transform:uppercase; color:var(--bone-dim);}
 
-  .crow{background:var(--ink-2); border-radius:12px; padding:12px 14px; display:flex;
-        flex-direction:column; gap:10px;}
-  .crow-head{display:flex; align-items:baseline; justify-content:space-between;}
-  .cname{font-family:'Fraunces',serif; font-size:22px; font-weight:800; letter-spacing:0.02em;}
-  .cstate{font-size:12px; font-weight:700; color:var(--bone-dim); text-transform:uppercase;
-          letter-spacing:0.08em;}
+  .fork-row{display:flex; gap:12px; margin-top:6px;}
+  .fbtn{flex:1; padding:26px 0; border-radius:14px; border:3px solid var(--line-dark);
+        background:transparent; color:var(--bone); cursor:pointer;
+        display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .fbtn .fl{font-family:'Fraunces',serif; font-size:38px; font-weight:800; line-height:1;}
+  .fbtn .fs{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+            letter-spacing:0.08em; text-transform:uppercase; color:var(--bone-dim);}
+  .fbtn.on{background:var(--amber); border-color:var(--amber); color:var(--ink);}
+  .fbtn.on .fs{color:var(--ink);}
+  .fbtn:disabled{opacity:0.18;}
+  .fbtn:active{transform:scale(0.97);}
 
-  .cbtns{display:flex; gap:8px;}
-  .cbtn{
-    flex:1; padding:18px 0; border-radius:10px; border:2px solid var(--line-dark);
-    background:transparent; color:var(--bone); font-family:'JetBrains Mono',monospace;
-    font-size:20px; font-weight:800; cursor:pointer;
-  }
-  .cbtn.on{background:var(--amber); border-color:var(--amber); color:var(--ink);}
-  .cbtn:disabled{opacity:0.2;}
-  .cbtn.drop{flex:0.8; font-size:13px; font-weight:700; color:var(--bone-dim);}
+  .dropall{width:100%; padding:16px; border-radius:12px; border:1px solid var(--line-dark);
+           background:transparent; color:var(--bone-dim);
+           font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+           letter-spacing:0.06em; cursor:pointer;}
 
-  .hint{font-size:13px; color:var(--bone-dim); text-align:center; line-height:1.5; padding:0 8px;}
+  .deadlock-btn{width:100%; padding:26px; border:none; border-radius:14px;
+                background:#D6432F; color:#fff; font-family:'JetBrains Mono',monospace;
+                font-size:24px; font-weight:800; letter-spacing:0.08em; cursor:pointer;}
+  .deadlock-btn:active{transform:scale(0.98);}
 
-  .conn-dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
-  .conn-dot.ok{background:var(--green);}
-  .conn-dot.bad{background:var(--red);}
-  .conn-status{position:fixed; top:10px; right:10px; font-size:10px; color:var(--bone-dim); display:flex; align-items:center;}
+  .reset-btn{width:100%; padding:12px; margin-top:8px; border-radius:10px;
+             border:1px solid var(--line-dark); background:transparent;
+             color:var(--bone-dim); font-family:'JetBrains Mono',monospace;
+             font-size:12px; font-weight:700; cursor:pointer;}
 
   /* ---------- STAGE (projector) — white background, high contrast, nothing but the table ---------- */
   .stage{min-height:100vh; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px; position:relative;}
