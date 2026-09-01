@@ -19,6 +19,8 @@ function defaultState() {
       id: i,
       number: i + 1,
       state: "thinking",
+      shot: false,
+      dead: false,
       leftFork: i, rightFork: (i - 1 + 5) % 5,
       holding: [], attemptedSecond: false
     })),
@@ -76,6 +78,9 @@ export class DiningPhilosophersRoom extends DurableObject {
       case "philPickup": this.philPickup(msg.philId, msg.side); break;
       case "philRelease": this.philRelease(msg.philId); break;
       case "philDropOne": this.philDropOne(msg.philId, msg.side); break;
+      case "toggleShot": this.toggleShot(msg.philId); break;
+      case "philKill": this.philKill(msg.philId); break;
+      case "philRevive": this.philRevive(msg.philId); break;
       case "forceDeadlock": this.forceDeadlock(); break;
       case "resetAll": this.resetAll(); break;
       default: return;
@@ -155,10 +160,36 @@ export class DiningPhilosophersRoom extends DurableObject {
     s.deadlocked = false;
   }
 
+  // narrator-only: show a philosopher as dead. Purely for the shooting
+  // beat -- drops whatever forks they were holding so the table can
+  // keep working without them.
+  philKill(philId) {
+    const s = this.state;
+    const p = s.philosophers[philId];
+    p.holding.forEach(fid => { s.forks[fid].lockedBy = null; });
+    p.holding = [];
+    p.state = "thinking";
+    p.attemptedSecond = false;
+    p.dead = true;
+    s.deadlocked = false;
+  }
+
+  philRevive(philId) {
+    this.state.philosophers[philId].dead = false;
+  }
+
+  // narrator-only: flips one philosopher to a skeleton and back.
+  // purely cosmetic - does not touch forks or the deadlock logic.
+  toggleShot(philId) {
+    const p = this.state.philosophers[philId];
+    if (!p) return;
+    p.shot = !p.shot;
+  }
+
   forceDeadlock() {
     const s = this.state;
     s.forks.forEach(f => { f.lockedBy = null; });
-    s.philosophers.forEach(p => {
+    s.philosophers.filter(p => !p.dead).forEach(p => {
       p.holding = [p.leftFork];
       p.state = "stuck";
       p.attemptedSecond = true;
