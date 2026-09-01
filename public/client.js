@@ -1,11 +1,10 @@
-// client.js — ONLY TWO ROUTES.
+// client.js
 //
-//   /table    -> the projector view. Philosophers shown by COLOUR.
-//   /console  -> the operator's single control panel. She drives everything.
+//   /table            -> the projector view (pentagon, point facing down)
+//   /phil0 .. /phil4  -> one phone per philosopher, sits on the table
 //
-// No per-philosopher phones. No fork phones. No waiter. The operator
-// clicks along with what she sees on stage, and has one big button to
-// force the deadlock instantly.
+// No console. No operator control. Each philosopher taps their own forks,
+// and any one of them can hit DEADLOCK to trigger it for the whole table.
 
 const path = location.pathname.replace(/^\//, '') || 'table';
 const app = document.getElementById('app');
@@ -47,52 +46,53 @@ function send(action, extra){
 
 function render(){
   if(!state){ app.innerHTML = `<div class="role-screen"><p class="hint">Loading…</p></div>`; return; }
-  if(path === 'console') return renderConsole();
+  if(path.startsWith('phil')) return renderPhil(parseInt(path.replace('phil','')));
   return renderTable();
 }
 
 // =====================================================
-// CONSOLE  (operator only)
+// PHILOSOPHER PHONE
 // =====================================================
-function renderConsole(){
-  const rows = state.philosophers.map(p => {
-    const left  = state.forks[p.leftFork];
-    const right = state.forks[p.rightFork];
-    const hasLeft  = left.lockedBy === p.id;
-    const hasRight = right.lockedBy === p.id;
-    const canLeft  = left.lockedBy === null;
-    const canRight = right.lockedBy === null;
+function renderPhil(id){
+  const p = state.philosophers[id];
+  if(!p){ app.innerHTML = `<div class="role-screen"><p class="hint">Unknown: ${path}</p></div>`; return; }
 
-    const label = p.state === "eating" ? "EATING"
-                : p.state === "stuck"  ? "STUCK"
-                : p.holding.length === 1 ? "HAS 1 FORK"
-                : "thinking";
+  const left  = state.forks[p.leftFork];
+  const right = state.forks[p.rightFork];
+  const hasLeft  = left.lockedBy === p.id;
+  const hasRight = right.lockedBy === p.id;
+  const canLeft  = left.lockedBy === null;
+  const canRight = right.lockedBy === null;
 
-    return `
-      <div class="crow" style="border-left:10px solid #${p.hex};">
-        <div class="crow-head">
-          <span class="cname" style="color:#${p.hex};">${p.colour}</span>
-          <span class="cstate">${label}</span>
-        </div>
-        <div class="cbtns">
-          <button class="cbtn ${hasLeft?'on':''}" ${(!canLeft && !hasLeft)?'disabled':''}
-            onclick="send('${hasLeft?'philDropOne':'philPickup'}',{philId:${p.id},side:'left'})">
-            ${left.letter}
-          </button>
-          <button class="cbtn ${hasRight?'on':''}" ${(!canRight && !hasRight)?'disabled':''}
-            onclick="send('${hasRight?'philDropOne':'philPickup'}',{philId:${p.id},side:'right'})">
-            ${right.letter}
-          </button>
-          <button class="cbtn drop" onclick="send('philRelease',{philId:${p.id}})">drop</button>
-        </div>
-      </div>`;
-  }).join("");
+  const label = p.state === "eating" ? "EATING"
+              : p.state === "stuck"  ? "DEADLOCK"
+              : p.holding.length === 1 ? "HOLDING ONE"
+              : "thinking";
 
   app.innerHTML = `
-    <div class="console">
-      <button class="big-red" onclick="send('forceDeadlock')">DEADLOCK</button>
-      <button class="big-grey" onclick="send('resetAll')">RESET</button>
-      ${rows}
+    <div class="phil">
+      <div class="phil-num">${p.number}</div>
+      <div class="phil-state">${label}</div>
+
+      <div class="fork-row">
+        <button class="fbtn ${hasLeft?'on':''}" ${(!canLeft && !hasLeft)?'disabled':''}
+          onclick="send('${hasLeft?'philDropOne':'philPickup'}',{philId:${id},side:'left'})">
+          <span class="fl">${left.letter}</span>
+          <span class="fs">${hasLeft ? 'drop' : 'pick up'}</span>
+        </button>
+        <button class="fbtn ${hasRight?'on':''}" ${(!canRight && !hasRight)?'disabled':''}
+          onclick="send('${hasRight?'philDropOne':'philPickup'}',{philId:${id},side:'right'})">
+          <span class="fl">${right.letter}</span>
+          <span class="fs">${hasRight ? 'drop' : 'pick up'}</span>
+        </button>
+      </div>
+
+      <button class="dropall" onclick="send('philRelease',{philId:${id}})">put both down</button>
+
+      <div class="spacer"></div>
+
+      <button class="deadlock-btn" onclick="send('forceDeadlock')">DEADLOCK</button>
+      <button class="reset-btn" onclick="send('resetAll')">reset table</button>
     </div>
   `;
 }
@@ -102,7 +102,8 @@ function renderConsole(){
 // =====================================================
 function renderTable(){
   const CENTER = 50, SEAT_R = 42, FORK_R = 33;
-  const seatAngle = i => (-90 + i * 72) * Math.PI / 180;
+  // -54 rotates the ring 36 degrees so a POINT faces down
+  const seatAngle = i => (-54 + i * 72) * Math.PI / 180;
   const pointAt = (a, r) => ({
     top:  `${CENTER + r * Math.sin(a)}%`,
     left: `${CENTER + r * Math.cos(a)}%`
@@ -128,9 +129,9 @@ function renderTable(){
                 : p.state === "stuck"  ? "DEADLOCK!!!"
                 : "thinking";
     return `<div class="seat ${p.state}" style="top:${pos.top}; left:${pos.left};
-              transform:translate(-50%,-50%); border-color:#${p.hex};">
+              transform:translate(-50%,-50%);">
       <span class="seat-icon">${icon}</span>
-      <span class="seat-name" style="color:#${p.hex};">${p.colour}</span>
+      <span class="seat-name">${p.number}</span>
       <span class="seat-state">${label}</span>
     </div>`;
   }).join("");
