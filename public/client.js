@@ -2,6 +2,8 @@
 //
 //   /table            -> the projector view (pentagon, point facing down)
 //   /phil0 .. /phil4  -> one phone per philosopher, sits on the table
+//   /shoot            -> narrator only. Toggles the TOP-LEFT philosopher
+//                        (seat 4) to a skeleton and back.
 //
 // No console. No operator control. Each philosopher taps their own forks,
 // and any one of them can hit DEADLOCK to trigger it for the whole table.
@@ -46,6 +48,7 @@ function send(action, extra){
 
 function render(){
   if(!state){ app.innerHTML = `<div class="role-screen"><p class="hint">Loading…</p></div>`; return; }
+  if(path === 'shoot') return renderShoot();
   if(path.startsWith('phil')) return renderPhil(parseInt(path.replace('phil','')));
   return renderTable();
 }
@@ -98,6 +101,27 @@ function renderPhil(id){
 }
 
 // =====================================================
+// SHOOT  (narrator only)
+// =====================================================
+const SHOOT_TARGET = 4;   // seat 4 = TOP-LEFT with the pentagon pointing down
+
+function renderShoot(){
+  const p = state.philosophers[SHOOT_TARGET];
+  if(!p){ app.innerHTML = `<div class="role-screen"><p class="hint">no target</p></div>`; return; }
+
+  app.innerHTML = `
+    <div class="phil">
+      <div class="phil-num">${p.shot ? '💀' : p.number}</div>
+      <div class="phil-state">${p.shot ? 'DOWN' : 'alive'}</div>
+      <div class="spacer"></div>
+      <button class="deadlock-btn" onclick="send('toggleShot',{philId:${SHOOT_TARGET}})">
+        ${p.shot ? 'BRING BACK' : 'SHOOT'}
+      </button>
+    </div>
+  `;
+}
+
+// =====================================================
 // TABLE  (projector)
 // =====================================================
 function renderTable(){
@@ -124,14 +148,14 @@ function renderTable(){
 
   const seats = state.philosophers.map((p,i) => {
     const pos = seatPos[i];
-    const icon  = p.state === "eating" ? "😋" : "🙂";
-    const label = p.state === "eating" ? "eating"
+    const icon  = p.shot ? "💀" : (p.state === "eating" ? "😋" : "🙂");
+    const label = p.shot ? "dead"
+                : p.state === "eating" ? "eating"
                 : p.state === "stuck"  ? "DEADLOCK!!!"
                 : "thinking";
-    return `<div class="seat ${p.state}" style="top:${pos.top}; left:${pos.left};
+    return `<div class="seat ${p.shot ? 'shot' : p.state}" style="top:${pos.top}; left:${pos.left};
               transform:translate(-50%,-50%);">
       <span class="seat-icon">${icon}</span>
-      <span class="seat-name">${p.number}</span>
       <span class="seat-state">${label}</span>
     </div>`;
   }).join("");
