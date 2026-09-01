@@ -57,6 +57,39 @@
   .big-btn.release{background:transparent; color:var(--bone); border:1px solid var(--line-dark);}
 
   .spacer{flex:1;}
+
+  /* ---------- CONSOLE (operator) ---------- */
+  .console{min-height:100vh; min-height:100dvh; padding:14px; display:flex; flex-direction:column; gap:10px;}
+
+  .big-red{
+    width:100%; padding:26px; border:none; border-radius:14px;
+    background:#D6432F; color:#fff; font-family:'JetBrains Mono',monospace;
+    font-size:26px; font-weight:800; letter-spacing:0.06em; cursor:pointer;
+  }
+  .big-red:active{transform:scale(0.98);}
+  .big-grey{
+    width:100%; padding:16px; border:1px solid var(--line-dark); border-radius:12px;
+    background:transparent; color:var(--bone); font-family:'JetBrains Mono',monospace;
+    font-size:15px; font-weight:700; letter-spacing:0.04em; cursor:pointer;
+  }
+
+  .crow{background:var(--ink-2); border-radius:12px; padding:12px 14px; display:flex;
+        flex-direction:column; gap:10px;}
+  .crow-head{display:flex; align-items:baseline; justify-content:space-between;}
+  .cname{font-family:'Fraunces',serif; font-size:22px; font-weight:800; letter-spacing:0.02em;}
+  .cstate{font-size:12px; font-weight:700; color:var(--bone-dim); text-transform:uppercase;
+          letter-spacing:0.08em;}
+
+  .cbtns{display:flex; gap:8px;}
+  .cbtn{
+    flex:1; padding:18px 0; border-radius:10px; border:2px solid var(--line-dark);
+    background:transparent; color:var(--bone); font-family:'JetBrains Mono',monospace;
+    font-size:20px; font-weight:800; cursor:pointer;
+  }
+  .cbtn.on{background:var(--amber); border-color:var(--amber); color:var(--ink);}
+  .cbtn:disabled{opacity:0.2;}
+  .cbtn.drop{flex:0.8; font-size:13px; font-weight:700; color:var(--bone-dim);}
+
   .hint{font-size:13px; color:var(--bone-dim); text-align:center; line-height:1.5; padding:0 8px;}
 
   .conn-dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
