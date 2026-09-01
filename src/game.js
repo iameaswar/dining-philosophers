@@ -6,17 +6,29 @@
 // DELIBERATELY MINIMAL: this is only ever the "deadlock" state — no Waiter,
 // no seat limits, no second act. The Waiter is 100% live theater (a real
 // person tapping shoulders on stage) and never touches this code at all.
-// Philosophers are labeled 1-5, Forks are labeled A-E — no names, no
-// "Person N," nothing beyond the bare number/letter and a one-word state.
+// Philosophers are labeled by COLOUR (matching their napkins), Forks are
+// labeled A-E. Nothing else on screen but a one-word state.
 
 import { DurableObject } from "cloudflare:workers";
 
 const FORK_LETTERS = ["A", "B", "C", "D", "E"];
 
+// must match the napkin colours the philosophers actually wear
+const PHIL_COLOURS = [
+  { name: "RED",    hex: "D6432F" },
+  { name: "BLUE",   hex: "2C6FBB" },
+  { name: "GREEN",  hex: "2C7A3F" },
+  { name: "YELLOW", hex: "E0A800" },
+  { name: "PURPLE", hex: "7A3E9D" },
+];
+
 function defaultState() {
   return {
     philosophers: [0, 1, 2, 3, 4].map(i => ({
-      id: i, number: i + 1, state: "thinking",
+      id: i,
+      colour: PHIL_COLOURS[i].name,
+      hex: PHIL_COLOURS[i].hex,
+      state: "thinking",
       leftFork: i, rightFork: (i - 1 + 5) % 5,
       holding: [], attemptedSecond: false
     })),
@@ -73,6 +85,8 @@ export class DiningPhilosophersRoom extends DurableObject {
     switch (msg.action) {
       case "philPickup": this.philPickup(msg.philId, msg.side); break;
       case "philRelease": this.philRelease(msg.philId); break;
+      case "philDropOne": this.philDropOne(msg.philId, msg.side); break;
+      case "forceDeadlock": this.forceDeadlock(); break;
       case "resetAll": this.resetAll(); break;
       default: return;
     }
@@ -134,6 +148,35 @@ export class DiningPhilosophersRoom extends DurableObject {
       s.deadlocked = true;
     }
   }
+  // One tap -> jump straight to the full deadlock state.
+  // Every philosopher holds their LEFT fork and has already failed
+  // to get their right one. This is what five people pressing
+  // buttons simultaneously would produce - but guaranteed, on cue.
+  // put back a single fork (console toggle), leaving the other in hand
+  philDropOne(philId, side) {
+    const s = this.state;
+    const p = s.philosophers[philId];
+    const forkId = side === 'left' ? p.leftFork : p.rightFork;
+    if (s.forks[forkId].lockedBy !== philId) return;
+    s.forks[forkId].lockedBy = null;
+    p.holding = p.holding.filter(f => f !== forkId);
+    p.state = p.holding.length === 0 ? "thinking" : "holding-one";
+    p.attemptedSecond = false;
+    s.deadlocked = false;
+  }
+
+  forceDeadlock() {
+    const s = this.state;
+    s.forks.forEach(f => { f.lockedBy = null; });
+    s.philosophers.forEach(p => {
+      p.holding = [p.leftFork];
+      p.state = "stuck";
+      p.attemptedSecond = true;
+      s.forks[p.leftFork].lockedBy = p.id;
+    });
+    s.deadlocked = true;
+  }
+
   resetAll() {
     this.state = defaultState();
   }
