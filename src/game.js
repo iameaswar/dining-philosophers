@@ -6,28 +6,18 @@
 // DELIBERATELY MINIMAL: this is only ever the "deadlock" state — no Waiter,
 // no seat limits, no second act. The Waiter is 100% live theater (a real
 // person tapping shoulders on stage) and never touches this code at all.
-// Philosophers are labeled by COLOUR (matching their napkins), Forks are
-// labeled A-E. Nothing else on screen but a one-word state.
+// Philosophers are labeled 1-5, Forks are labeled A-E.
+// Nothing else on screen but a one-word state.
 
 import { DurableObject } from "cloudflare:workers";
 
 const FORK_LETTERS = ["A", "B", "C", "D", "E"];
 
-// must match the napkin colours the philosophers actually wear
-const PHIL_COLOURS = [
-  { name: "RED",    hex: "D6432F" },
-  { name: "BLUE",   hex: "2C6FBB" },
-  { name: "GREEN",  hex: "2C7A3F" },
-  { name: "YELLOW", hex: "E0A800" },
-  { name: "PURPLE", hex: "7A3E9D" },
-];
-
 function defaultState() {
   return {
     philosophers: [0, 1, 2, 3, 4].map(i => ({
       id: i,
-      colour: PHIL_COLOURS[i].name,
-      hex: PHIL_COLOURS[i].hex,
+      number: i + 1,
       state: "thinking",
       leftFork: i, rightFork: (i - 1 + 5) % 5,
       holding: [], attemptedSecond: false
