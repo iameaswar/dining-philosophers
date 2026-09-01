@@ -111,7 +111,7 @@
     border:3px solid var(--ink);
     display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
   }
-  .table-center .tc-value{font-family:'Fraunces', serif; font-size:clamp(20px,3.4vmin,34px); font-weight:800; padding:0 10%; color:var(--ink); text-transform:lowercase;}
+  .table-center .tc-value{font-family:'Fraunces', serif; font-size:clamp(26px,4.6vmin,46px); font-weight:900; padding:0 8%; color:var(--ink); text-transform:lowercase;}
   .table-center.deadlocked .tc-value{color:var(--red); text-transform:none;}
   .table-center.eating .tc-value{color:var(--green-dim);}
 
@@ -121,14 +121,16 @@
     display:flex; align-items:center; justify-content:center; flex-direction:column;
     transition: border-color .35s ease, background .35s ease, box-shadow .35s ease;
   }
-  .seat .seat-icon{font-size:clamp(17px,3vmin,30px);}
-  .seat .seat-name{font-family:'Fraunces', serif; font-weight:800; font-size:clamp(18px,3vmin,28px); margin-top:2px; color:var(--ink); text-align:center; padding:0 6%; line-height:1.1;}
-  .seat .seat-state{font-size:clamp(10px,1.4vmin,13px); text-transform:lowercase; letter-spacing:0.04em; color:#3a352c; margin-top:3px; font-weight:800;}
+  .seat .seat-icon{font-size:clamp(30px,5.5vmin,58px); line-height:1;}
+  .seat .seat-state{font-size:clamp(14px,2.3vmin,22px); text-transform:lowercase;
+                    letter-spacing:0.02em; color:#1C1C1C; margin-top:6px; font-weight:900;}
   .seat.thinking{border-color:var(--ink);}
   .seat.holding-one{border-color:var(--amber); background:#FDF0DA; box-shadow:0 0 0 6px rgba(232,163,61,0.18);}
   .seat.eating{border-color:var(--green); background:#EEF4EE; box-shadow:0 0 0 6px rgba(92,138,92,0.2);}
   .seat.stuck{border-color:var(--red); background:#FBEAE7; box-shadow:0 0 0 6px rgba(214,67,47,0.25); animation:seat-pulse 0.9s infinite;}
   .seat.stuck .seat-state{color:var(--red); font-weight:900;}
+  .seat.shot{border-color:#555; background:#E8E8E8; opacity:0.75; box-shadow:none;}
+  .seat.shot .seat-state{color:#555; font-weight:800;}
   @keyframes seat-pulse{0%,100%{box-shadow:0 0 0 5px rgba(214,67,47,0.2);} 50%{box-shadow:0 0 0 12px rgba(214,67,47,0.4);}}
 
   .fork{
@@ -139,7 +141,7 @@
     padding:4px;
   }
   .fork .fork-emoji{font-size:clamp(10px,1.5vmin,15px);}
-  .fork .fork-label{font-size:clamp(11px,1.8vmin,17px); font-weight:800; color:#4a4438; margin-top:1px; text-align:center; line-height:1.05;}
+  .fork .fork-label{font-size:clamp(13px,2.1vmin,20px); font-weight:900; color:#2A2620; margin-top:1px; text-align:center; line-height:1.05;}
   .fork.free{border-color:var(--green-dim);}
   .fork.locked{border-color:var(--amber); background:#FDF0DA; transform:scale(1.14);}
   .fork.locked .fork-label{color:#6b4a17; font-weight:800;}
